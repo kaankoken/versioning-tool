@@ -1,0 +1,5 @@
+# Discarding the .log files
+**.log
+
+# Discarding build package
+main
