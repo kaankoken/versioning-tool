@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/barweiss/go-tuple v1.0.2
 	github.com/google/go-github/v47 v47.0.1-0.20220822225427-243bda850b1f
-	github.com/kaankoken/helper v0.0.1
+	github.com/kaankoken/helper v0.0.3
 )
 
 require (
@@ -13,7 +13,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/dig v1.15.0 // indirect
-	go.uber.org/fx v1.18.1 // indirect
+	go.uber.org/fx v1.18.1
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.23.0 // indirect
 	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e // indirect
