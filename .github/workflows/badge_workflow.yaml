@@ -1,0 +1,38 @@
+name: Badge Workflow
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+on:
+  workflow_run:
+    workflows: ["Test Workflow"]
+    types:
+      - completed
+  workflow_dispatch:
+
+  push:
+    tags:
+      - "**"
+
+jobs:
+  create-coverage-badges:
+    name: Create Coverage Badges
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get Coverage Percentage
+        run: echo "COV=$(go tool cover --func=cover.out | grep 'total' | awk '{print $3}')" >> $GITHUB_ENV
+
+      - name: Create the Badge
+        uses: schneegans/dynamic-badges-action@master
+        with:
+          auth: ${{ secrets.GIST_KEY }}
+          gistID: ${{ secrets.GIST_ID }}
+          filename: helper-coverage.json
+          label: Coverage
+          message: ${{ env.COV }}
+          valColorRange: ${{ env.COV }}
+          maxColorRange: 100
+          minColorRange: 0
