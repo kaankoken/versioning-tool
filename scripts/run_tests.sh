@@ -1,5 +1,7 @@
 #!/bin/bash
 
+mkdir -p tests
+
 echo "Running test, this take a while..."
 echo
 input=$(find "tests" \( -name "*_test.go" \))
@@ -47,6 +49,13 @@ do
     echo "It took $elapsed seconds to run $line"
     echo
 done
+
+filename=cover.out
+
+if [ ! -f $filename ]
+then
+    touch $filename
+fi
 
 rm -rf cover.tmp.out
 go tool cover -html=cover.out -o cover.html
