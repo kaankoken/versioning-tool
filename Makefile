@@ -1,15 +1,18 @@
+build:
+	go build main.go
+
 clean:
 	go clean -modcache
 	go mod tidy
 
 lint:
-	golint ./...
+	bash ./scripts/run_command.sh "golint ./..."	
 
 run-vet:
-	go vet ./...
+	bash ./scripts/run_command.sh "go vet ./..."
 
 static-check:
-	staticcheck ./...
+	bash ./scripts/run_command.sh "staticcheck ./..."
 
 test:
 	bash ./scripts/run_tests.sh
