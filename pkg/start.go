@@ -32,7 +32,7 @@ ${{ github.token }} ${{ github.repository_owner }} ${{ github.event.repository.n
 [return] -> returns address of InputStruct that contains all of the function parameters
 */
 func Run(key string, owner string, repo string, base ...string) (input *InputStruct) {
-	if len(base) > 0 {
+	if len(base) > 0 && base[0] != "" {
 		return &InputStruct{Base: base[0], EncodedKey: key, Owner: owner, Repo: repo}
 	}
 
