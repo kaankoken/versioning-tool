@@ -3,7 +3,7 @@
 <html>
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>Go Coverage Report</title>
+		<title>cmd: Go Coverage Report</title>
 		<style>
 			body {
 				background: black;
@@ -55,6 +55,14 @@
 			<div id="nav">
 				<select id="files">
 				
+				<option value="file0">github.com/kaankoken/versioning-tool/cmd/main_app.go (100.0%)</option>
+				
+				<option value="file1">github.com/kaankoken/versioning-tool/pkg/flavor.go (100.0%)</option>
+				
+				<option value="file2">github.com/kaankoken/versioning-tool/pkg/start.go (100.0%)</option>
+				
+				<option value="file3">github.com/kaankoken/versioning-tool/pkg/tag.go (100.0%)</option>
+				
 				</select>
 			</div>
 			<div id="legend">
@@ -75,6 +83,136 @@
 			</div>
 		</div>
 		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package cmd
+
+import (
+        "context"
+        "fmt"
+
+        "github.com/kaankoken/helper/pkg/helper"
+        "github.com/kaankoken/versioning-tool/pkg"
+        versionlabel "github.com/kaankoken/versioning-tool/pkg/version-label"
+        "go.uber.org/fx"
+)
+
+// MainApp -&gt; Registering main app to FX
+func MainApp(args []string) (app *fx.App, err error) <span class="cov10" title="4">{
+        // argument controls
+        if len(args) &lt;= 0 </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("%s", "Wrong number of inputs, no arguments found")
+        }</span>
+
+        <span class="cov8" title="3">if len(args) &lt; 3 </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("%s", "Wrong number of inputs, cannot be less than 3")
+        }</span>
+
+        <span class="cov5" title="2">input := pkg.Run(args[0], args[1], args[2], args[3:]...)
+
+        a := fx.New(
+                fx.Supply(input),
+                pkg.TagModule,
+                pkg.FlavorModule,
+                helper.LoggerModule,
+                fx.Invoke(RegisterHooks),
+                versionlabel.VersionLabelModule,
+        )
+
+        return a, nil</span>
+}
+
+// RegisterHooks -&gt; Registering lifecycle of fx &amp; running http server (Gin)
+func RegisterHooks(lifecycle fx.Lifecycle, logger *helper.LogHandler) <span class="cov8" title="3">{
+        lifecycle.Append(
+                fx.Hook{
+                        OnStart: func(context.Context) error </span><span class="cov8" title="3">{
+                                logger.Info("Starting application")
+                                return nil
+                        }</span>,
+                        OnStop: func(context.Context) error <span class="cov8" title="3">{
+                                logger.Info("Stopping application")
+                                return nil
+                        }</span>,
+                },
+        )
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package pkg
+
+import (
+        "github.com/kaankoken/helper/pkg"
+        "go.uber.org/fx"
+)
+
+// FlavorModule -&gt; Dependency Injection for FlavorModule module
+var FlavorModule = fx.Options(fx.Provide(ConstructFlavor))
+
+// ConstructFlavor -&gt; Flavor needed by DI &amp; {helper.Logger}
+func ConstructFlavor() *pkg.Flavor <span class="cov10" title="2">{
+        return &amp;pkg.Flavor{F: "dev"}
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package pkg
+
+// InputStruct -&gt; Dependency Injection Data Model for StartModule
+type InputStruct struct {
+        Base       string
+        EncodedKey string
+        Owner      string
+        Repo       string
+}
+
+/*
+Run -&gt; First function that needs to run to function whole pipeline
+${{ github.token }} ${{ github.repository_owner }} ${{ github.event.repository.name }}
+
+[key]
+
+        -&gt; {personal access token}  that needs be created on github [link](https://github.com/settings/tokens)
+        -&gt; if you are going use github action you can pass {github.token} on xxx.yaml
+
+[owner]
+
+        -&gt; {owner} of the repo/project
+        -&gt; if you are going use github action you can pass {github.repository_owner} on xxx.yaml
+
+[repo]
+
+        -&gt; {name} of the repository going to be used
+        -&gt; if you are going use github action you can pass {github.event.repository.name} on xxx.yaml
+
+[base] -&gt; It is a optional parameter. By default refers to {master} branch
+
+[return] -&gt; returns address of InputStruct that contains all of the function parameters
+*/
+func Run(key string, owner string, repo string, base ...string) (input *InputStruct) <span class="cov10" title="4">{
+        if len(base) &gt; 0 &amp;&amp; base[0] != "" </span><span class="cov5" title="2">{
+                return &amp;InputStruct{Base: base[0], EncodedKey: key, Owner: owner, Repo: repo}
+        }</span>
+
+        <span class="cov5" title="2">return &amp;InputStruct{Base: "master", EncodedKey: key, Owner: owner, Repo: repo}</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package pkg
+
+import (
+        "github.com/kaankoken/helper/pkg"
+        "go.uber.org/fx"
+)
+
+// TagModule -&gt; Dependency Injection for TagModule module
+var TagModule = fx.Options(fx.Provide(ConstructTag))
+
+// ConstructTag -&gt; Creating Tag needed by DI &amp; {helper.Logger}
+func ConstructTag() *pkg.Tag <span class="cov10" title="2">{
+        tag := "Versioning Tool -&gt; "
+
+        return &amp;pkg.Tag{T: tag}
+}</span>
+</pre>
 		
 		</div>
 	</body>
