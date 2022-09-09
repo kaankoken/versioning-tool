@@ -14,10 +14,9 @@ import (
 func TestStart(t *testing.T) {
 	t.Parallel()
 
-	var structCompareType pkg.InputStruct
-
 	t.Run("start=without-base", func(t *testing.T) {
 		t.Parallel()
+		var structCompareType *pkg.InputStruct
 
 		input := pkg.Run("key", "owner", "repo")
 
@@ -27,6 +26,7 @@ func TestStart(t *testing.T) {
 
 	t.Run("start=empty-string-base", func(t *testing.T) {
 		t.Parallel()
+		var structCompareType *pkg.InputStruct
 
 		input := pkg.Run("key", "owner", "repo", "")
 
@@ -36,6 +36,7 @@ func TestStart(t *testing.T) {
 
 	t.Run("start=with-base", func(t *testing.T) {
 		t.Parallel()
+		var structCompareType *pkg.InputStruct
 
 		input := pkg.Run("key", "owner", "repo", "master")
 
