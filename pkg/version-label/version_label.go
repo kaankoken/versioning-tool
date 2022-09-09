@@ -18,7 +18,6 @@ import (
 // ResultStruct -> Dependency Injection Data Model for xxx Module
 type ResultStruct struct {
 	PrNumber  int
-	IsMerged  bool
 	LabelType tuple.T2[string, int]
 }
 
@@ -26,29 +25,41 @@ type ResultStruct struct {
 type PrClient struct{ Client *github.Client }
 
 var (
-	Major  tuple.T2[string, int] = tuple.New2("major", 0)
-	Minor  tuple.T2[string, int] = tuple.New2("minor", 1)
-	Patch  tuple.T2[string, int] = tuple.New2("patch", 2)
+	// Major -> data type for major label
+	Major tuple.T2[string, int] = tuple.New2("major", 0)
+
+	// Minor -> data type for minor label
+	Minor tuple.T2[string, int] = tuple.New2("minor", 1)
+
+	// Patch -> data type for patch label
+	Patch tuple.T2[string, int] = tuple.New2("patch", 2)
+
+	// Urgent -> data type for urgent label
 	Urgent tuple.T2[string, int] = tuple.New2("urgent", 0)
 )
 
+// VersionLabelModule -> Dependency Injection for VersionLabelModule module
 var VersionLabelModule = fx.Options(
 	fx.Provide(CreateGithubClient),
 	fx.Invoke(LisClosedPrs),
 )
 
 /*
-AsyncFilterMergedPR ->
+AsyncFilterMergedPR -> Async concurrent handler to filter merged PRs
+
+[logger] -> takes logger as an argument to log crash
+[input] -> takes input as an argument that contains {repository name}, {repository owner} & {personal key}
+[data] -> current PR object that in-progress
+[wg] & [ch] -> concurrent job handlers
 */
 func (client PrClient) AsyncFilterMergedPR(logger *helper.LogHandler, input *pkg.InputStruct, data *ResultStruct, wg *sync.WaitGroup, ch chan<- ResultStruct) {
 	ctx := context.Background()
 
 	result, _, err := client.Client.PullRequests.IsMerged(ctx, input.Owner, input.Repo, data.PrNumber)
-
 	logger.Error(err)
 
 	if result {
-		ch <- ResultStruct{PrNumber: data.PrNumber, IsMerged: result, LabelType: data.LabelType}
+		ch <- ResultStruct{PrNumber: data.PrNumber, LabelType: data.LabelType}
 	}
 	defer wg.Done()
 }
@@ -72,6 +83,13 @@ func CreateGithubClient(input *pkg.InputStruct) (client *PrClient) {
 	return &PrClient{Client: github.NewClient(authClient)}
 }
 
+/*
+FilterMergedPRs -> Main looper for list of filtered closed PRs
+
+[logger] -> takes logger as an argument to log crash
+[input] -> takes input as an argument that contains {repository name}, {repository owner} & {personal key}
+[res] -> filtered PRs which are {"closed"}
+*/
 func (client PrClient) FilterMergedPRs(logger *helper.LogHandler, input *pkg.InputStruct, res *[]ResultStruct) {
 	var wg sync.WaitGroup
 	ch := make(chan ResultStruct)
@@ -85,6 +103,10 @@ func (client PrClient) FilterMergedPRs(logger *helper.LogHandler, input *pkg.Inp
 		wg.Wait()
 		close(ch)
 	}()
+
+	for i := range ch {
+		fmt.Println(i)
+	}
 }
 
 /*
@@ -105,13 +127,7 @@ func LisClosedPrs(client *PrClient, logger *helper.LogHandler, input *pkg.InputS
 	options := github.PullRequestListOptions{Base: input.Base, State: "closed", ListOptions: github.ListOptions{PerPage: 100}}
 
 	result, _, err := client.Client.PullRequests.List(ctx, input.Owner, input.Repo, &options)
-
-	err = logger.Error(err)
-	if err != nil {
-		return nil, err
-	}
-
-	logger.Error(fmt.Errorf("dahhdjklajsdjklaşsdasd"))
+	logger.Error(err)
 
 	// Filtering PRs that contains versioning labels
 	for _, v := range result {
