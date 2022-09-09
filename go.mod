@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/barweiss/go-tuple v1.0.2
 	github.com/google/go-github/v47 v47.0.1-0.20220822225427-243bda850b1f
-	github.com/kaankoken/helper v0.0.3
+	github.com/kaankoken/helper v0.0.4
 )
 
 require (
@@ -24,7 +24,7 @@ require (
 
 require (
 	github.com/google/go-querystring v1.1.0 // indirect
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/exp v0.0.0-20220314205449-43aec2f8a4e7 // indirect
 	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094
 )
