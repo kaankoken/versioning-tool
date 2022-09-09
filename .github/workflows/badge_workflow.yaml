@@ -36,4 +36,5 @@ jobs:
           valColorRange: ${{ env.COV }}
           maxColorRange: 100
           minColorRange: 0
+          colorRangeSaturation: 75
           colorRangeLightness: 45
