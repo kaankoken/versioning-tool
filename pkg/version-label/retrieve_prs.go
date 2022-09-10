@@ -9,7 +9,6 @@ import (
 	"github.com/barweiss/go-tuple"
 	"github.com/google/go-github/v47/github"
 	"go.uber.org/fx"
-	"golang.org/x/oauth2"
 
 	"github.com/kaankoken/helper/pkg/helper"
 	"github.com/kaankoken/versioning-tool/pkg"
@@ -20,9 +19,6 @@ type ResultStruct struct {
 	PrNumber  int
 	LabelType tuple.T2[string, int]
 }
-
-// PrClient -> Dependency Injection Data Model while wrapping {*github.Client} for xxx Module
-type PrClient struct{ Client *github.Client }
 
 var (
 	// Major -> data type for major label
@@ -40,8 +36,7 @@ var (
 
 // VersionLabelModule -> Dependency Injection for VersionLabelModule module
 var VersionLabelModule = fx.Options(
-	fx.Provide(CreateGithubClient),
-	fx.Invoke(LisClosedPrs),
+	fx.Provide(LisClosedPrs),
 )
 
 /*
@@ -54,7 +49,6 @@ AsyncFilterMergedPR -> Async concurrent handler to filter merged PRs
 */
 func (client PrClient) AsyncFilterMergedPR(logger *helper.LogHandler, input *pkg.InputStruct, data *ResultStruct, wg *sync.WaitGroup, ch chan<- ResultStruct) {
 	ctx := context.Background()
-
 	result, _, err := client.Client.PullRequests.IsMerged(ctx, input.Owner, input.Repo, data.PrNumber)
 	logger.Error(err)
 
@@ -65,32 +59,13 @@ func (client PrClient) AsyncFilterMergedPR(logger *helper.LogHandler, input *pkg
 }
 
 /*
-CreateGithubClient -> Creates Github client using {input}
-
-[input] -> Function is directly connected to {InputStruct}
-
-[return] -> returns {*github.Client} wrapped with {PrClient}
-*/
-func CreateGithubClient(input *pkg.InputStruct) (client *PrClient) {
-	ctx := context.Background()
-
-	oauth := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: input.EncodedKey},
-	)
-
-	authClient := oauth2.NewClient(ctx, oauth)
-
-	return &PrClient{Client: github.NewClient(authClient)}
-}
-
-/*
 FilterMergedPRs -> Main looper for list of filtered closed PRs
 
 [logger] -> takes logger as an argument to log crash
 [input] -> takes input as an argument that contains {repository name}, {repository owner} & {personal key}
 [res] -> filtered PRs which are {"closed"}
 */
-func (client PrClient) FilterMergedPRs(logger *helper.LogHandler, input *pkg.InputStruct, res *[]ResultStruct) {
+func FilterMergedPRs(client *PrClient, logger *helper.LogHandler, input *pkg.InputStruct, res *[]ResultStruct) {
 	var wg sync.WaitGroup
 	ch := make(chan ResultStruct)
 
@@ -105,7 +80,7 @@ func (client PrClient) FilterMergedPRs(logger *helper.LogHandler, input *pkg.Inp
 	}()
 
 	for i := range ch {
-		fmt.Println(i)
+		fmt.Println(i.LabelType.V1)
 	}
 }
 
@@ -132,10 +107,11 @@ func LisClosedPrs(client *PrClient, logger *helper.LogHandler, input *pkg.InputS
 	// Filtering PRs that contains versioning labels
 	for _, v := range result {
 		for _, l := range v.Labels {
-			if strings.Contains(strings.ToLower(l.GetName()), strings.ToLower(Urgent.V1)) {
-				filteredPRs = append(filteredPRs, ResultStruct{PrNumber: v.GetNumber(), LabelType: Urgent})
-				break
-			}
+			// TODO: rethink urgent trigger for {githubAction}
+			//if strings.Contains(strings.ToLower(l.GetName()), strings.ToLower(Urgent.V1)) {
+			//	filteredPRs = append(filteredPRs, ResultStruct{PrNumber: v.GetNumber(), LabelType: Urgent})
+			//	break
+			//}
 
 			if strings.Contains(strings.ToLower(l.GetName()), strings.ToLower(Major.V1)) {
 				filteredPRs = append(filteredPRs, ResultStruct{PrNumber: v.GetNumber(), LabelType: Major})
