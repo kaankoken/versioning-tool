@@ -28,8 +28,9 @@ func MainApp(args []string) (app *fx.App, err error) {
 		pkg.TagModule,
 		pkg.FlavorModule,
 		helper.LoggerModule,
-		fx.Invoke(RegisterHooks),
+		versionlabel.GithubClient,
 		versionlabel.VersionLabelModule,
+		fx.Invoke(RegisterHooks),
 	)
 
 	return a, nil
