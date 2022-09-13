@@ -12,6 +12,13 @@ import (
 	"github.com/kaankoken/versioning-tool/pkg"
 )
 
+func CreateNewTag(client *PrClient, logger *helper.LogHandler, input *pkg.InputStruct, tag string) error {
+	ctx := context.Background()
+	_, _, err := client.Client.Repositories.CreateTagProtection(ctx, input.Owner, input.Repo, tag)
+
+	return logger.Error(err)
+}
+
 /*
 GenerateNewTag -> Gets existing version tag & increases according to label type
 
