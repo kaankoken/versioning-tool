@@ -2,7 +2,6 @@ package versionlabel
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 
@@ -35,9 +34,17 @@ var (
 )
 
 // VersionLabelModule -> Dependency Injection for VersionLabelModule module
-var VersionLabelModule = fx.Options(
-	fx.Provide(LisClosedPrs),
-)
+var VersionLabelModule = fx.Options(fx.Provide(LisClosedPrs))
+
+func AddToMap(fMap map[int][]ResultStruct, prNumber int, label tuple.T2[string, int]) {
+	if val, ok := fMap[prNumber]; ok {
+		val := append(val, ResultStruct{PrNumber: prNumber, LabelType: Urgent})
+		fMap[prNumber] = val
+	} else {
+		arr := []ResultStruct{{PrNumber: prNumber, LabelType: Urgent}}
+		fMap[prNumber] = arr
+	}
+}
 
 /*
 AsyncFilterMergedPR -> Async concurrent handler to filter merged PRs
@@ -65,13 +72,22 @@ FilterMergedPRs -> Main looper for list of filtered closed PRs
 [input] -> takes input as an argument that contains {repository name}, {repository owner} & {personal key}
 [res] -> filtered PRs which are {"closed"}
 */
-func FilterMergedPRs(client *PrClient, logger *helper.LogHandler, input *pkg.InputStruct, res *[]ResultStruct) {
+func FilterMergedPRs(client *PrClient, logger *helper.LogHandler, input *pkg.InputStruct, res *map[int][]ResultStruct) {
 	var wg sync.WaitGroup
 	ch := make(chan ResultStruct)
 
-	for _, data := range *res {
+	for _, val := range *res {
 		wg.Add(1)
-		go client.AsyncFilterMergedPR(logger, input, &data, &wg, ch)
+
+		if len(val) == 1 {
+			go client.AsyncFilterMergedPR(logger, input, &val[0], &wg, ch)
+		} else {
+			if val[0].LabelType == Urgent {
+				go client.AsyncFilterMergedPR(logger, input, &val[1], &wg, ch)
+			} else {
+				go client.AsyncFilterMergedPR(logger, input, &val[0], &wg, ch)
+			}
+		}
 	}
 
 	go func() {
@@ -79,9 +95,19 @@ func FilterMergedPRs(client *PrClient, logger *helper.LogHandler, input *pkg.Inp
 		close(ch)
 	}()
 
+	var versionTag tuple.T2[string, int]
 	for i := range ch {
-		fmt.Println(i.LabelType.V1)
+		if versionTag.Len() == 0 {
+			versionTag = i.LabelType
+		} else {
+			if i.LabelType.V2 < versionTag.V2 {
+				versionTag = i.LabelType
+			}
+		}
 	}
+
+	// TODO: generate the new tag
+	// CreateNewTag()
 }
 
 /*
@@ -92,10 +118,10 @@ LisClosedPrs -> Getting list of PRs that closed according {Base} branch
 [logger] -> takes logger as an argument to log crash
 [input] -> takes input as an argument that contains {repository name}, {repository owner} & {personal key}
 
-[return] -> returns either successful filtered {array of ResultStruct} or {error}
+[return] -> returns either successful filtered {map of ResultStruct} or {error}
 */
-func LisClosedPrs(client *PrClient, logger *helper.LogHandler, input *pkg.InputStruct) (*[]ResultStruct, error) {
-	filteredPRs := []ResultStruct{}
+func LisClosedPrs(client *PrClient, logger *helper.LogHandler, input *pkg.InputStruct) (*map[int][]ResultStruct, error) {
+	filteredPRs := map[int][]ResultStruct{}
 
 	// Gets only closed branches according to given base
 	ctx := context.Background()
@@ -104,31 +130,38 @@ func LisClosedPrs(client *PrClient, logger *helper.LogHandler, input *pkg.InputS
 	result, _, err := client.Client.PullRequests.List(ctx, input.Owner, input.Repo, &options)
 	logger.Error(err)
 
+	urgentTaggedPrNumber := -100
 	// Filtering PRs that contains versioning labels
 	for _, v := range result {
 		for _, l := range v.Labels {
 			// TODO: rethink urgent trigger for {githubAction}
-			//if strings.Contains(strings.ToLower(l.GetName()), strings.ToLower(Urgent.V1)) {
-			//	filteredPRs = append(filteredPRs, ResultStruct{PrNumber: v.GetNumber(), LabelType: Urgent})
-			//	break
-			//}
+			if strings.Contains(strings.ToLower(l.GetName()), strings.ToLower(Urgent.V1)) {
+				urgentTaggedPrNumber = v.GetNumber()
+				AddToMap(filteredPRs, urgentTaggedPrNumber, Urgent)
+				continue
+			}
 
 			if strings.Contains(strings.ToLower(l.GetName()), strings.ToLower(Major.V1)) {
-				filteredPRs = append(filteredPRs, ResultStruct{PrNumber: v.GetNumber(), LabelType: Major})
+				AddToMap(filteredPRs, v.GetNumber(), Major)
 				break
 			}
 
 			if strings.Contains(strings.ToLower(l.GetName()), strings.ToLower(Minor.V1)) {
-				filteredPRs = append(filteredPRs, ResultStruct{PrNumber: v.GetNumber(), LabelType: Minor})
+				AddToMap(filteredPRs, v.GetNumber(), Minor)
 				break
 			}
 
 			if strings.Contains(strings.ToLower(l.GetName()), strings.ToLower(Patch.V1)) {
-				filteredPRs = append(filteredPRs, ResultStruct{PrNumber: v.GetNumber(), LabelType: Patch})
+				AddToMap(filteredPRs, v.GetNumber(), Patch)
+
 				break
 			}
 		}
 	}
 
-	return &filteredPRs, nil
+	if urgentTaggedPrNumber == -100 {
+		return &filteredPRs, nil
+	}
+
+	return &map[int][]ResultStruct{urgentTaggedPrNumber: filteredPRs[urgentTaggedPrNumber]}, nil
 }
